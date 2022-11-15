@@ -5,8 +5,6 @@
 #include "decode.h"
 #include "util.h"
 
-const char *opArr[NUMBER_OPS] = {"ADD", "ADDI", "AND", "BEQ", "BGTZ", "BLEZ", "BNE", "DIV", "J", "JAL", "JR", "LUI", "LW", "MFHI", "MFLO", "MULT", "NOP", "OR", "ROTR", "SLL", "SLT", "SRL", "SUB", "SW", "SYSCALL", "XOR"};
-
 // Returns 0 on success, -1 if op isn't recognized, -2 if wrong number of args, <arg_number> if an arg isn't recognized (starting from 1).
 int
 decode(const char *instr, int *hex) // Traiter chaque cas + rajouter free du tableau **args
