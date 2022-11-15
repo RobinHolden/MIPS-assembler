@@ -100,19 +100,20 @@ decode(const char *instr, int *hex) // Traiter chaque cas + rajouter free du tab
 	return 0;
 }
 
-// Returns 0 on success, 1 if op isn't recognized.
+// Returns length of op, 0 if op not recognized.
 int 
 parseOp(const char *instr, int *opnumber)
 {
+	extern const char *opArr[];
 	char *op;
 	int i;
 
 	// Find op in instruction
 	op = emalloc((MAX_OP_SIZE + 1) * sizeof(char));
-	for (i = 0; instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\v' && instr[i] != '#' && instr[i] != '\n' && instr[i] != EOF; ++i){
+	for (i = 0; instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\0' && instr[i] != '\v'; ++i){
 		if (i == MAX_OP_SIZE){
 			free(op);
-			return 1;
+			return 0;
 		}
 		op[i] = instr[i];
 	}
@@ -122,51 +123,47 @@ parseOp(const char *instr, int *opnumber)
 	for (*opnumber = 0; *opnumber < NUMBER_OPS; ++(*opnumber)){
 		if (!strcmp(op, opArr[*opnumber])){
 			free(op);
-			return 0;
+			return i;
 		}
 	}
 	free(op);
-	return 1;
+	return 0;
 }
 
-// Returns number of arguments.
-int 
+// Returns number of arguments of passed instruction.
+int
 parseArgs(const char *instr, char ***args)
 {
 	int i, j, l, n;
 
-	l = 0;
-	// Find end of op
-	for (i = 0; instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\v'; ++i){
-		if (instr[i] == '#' || instr[i] == '\n' || instr[i] == EOF)
-			return 0;
-	}
-	// Treat args
+	i = j = l = n = 0;
+	
 	*args = emalloc(MAX_NUMBER_ARGS * sizeof(char *));
-	for (j = 0; j < MAX_NUMBER_ARGS; ++j){ // Initialize args to NULL
+	while (j < MAX_NUMBER_ARGS){ // Initialize args to NULL
 		*args[j] = NULL;
+		++j;
 	}
 	j = 0;
-	for (n = 0; n < MAX_NUMBER_ARGS;){
-		while (instr[i] == '\t' || instr[i] == ' ' || instr[i] == '\v'){ // Find arg
+	while (n < MAX_NUMBER_ARGS){
+		while (instr[i] == '\t' || instr[i] == ' ' || instr[i] == '\v'){ // Find start of arg
 			++i;
 		}
-		while (instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\v' && instr[i] != '#' && instr[i] != '\n' && instr[i] != EOF){ // Determine arg length
+		while (instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\v' && instr[i] != '\0'){ // Determine arg length
 			++i;
 			++l;
 		}
-		if (l == 0) // Detect if final arg
+		if (l == 0) // If end of instr
 			return n;
 		*args[n] = emalloc((l + 1) * sizeof(char));
 		i -= l;
-		for (j = 0; j < l; ++j){ // Save arg
+		while (j < l){ // Save arg
 			*args[n][j] = instr[i];
 			++i;
+			++j;
 		}
 		*args[n][j] = '\0';
 		++n;
-		l = 0;
+		j = l = 0;
 	}
-
-	return 0;
+	return n;
 }
