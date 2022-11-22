@@ -1,169 +1,138 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
 #include "decode.h"
 #include "util.h"
 
-// Returns 0 on success, -1 if op isn't recognized, -2 if wrong number of args, <arg_number> if an arg isn't recognized (starting from 1).
+/*
+ * Returns 0 on success, -1 if op isn't recognized, -2 if wrong number of args,
+ * <arg_number> if an arg isn't recognized (starting from 1).
+ */
 int
-decode(const char *instr, int *hex) // Traiter chaque cas + rajouter free du tableau **args
+decode(const char *instr, int *hex) /* Needs finishing off (don't forget to free) */
 {
-	char **args;
-	int opnumber;
+	operator op;
+	arguments args;
+	
+	if (!parseop(instr, &op))
+		return -1;
+	getargs(instr + op.opl, &args);
 
-	if (parseOp(instr, &opnumber))
-		return 1;
-	parseArgs(instr, &args);
-
-	// Sum op value to *hex --- A modif
+	/* Sum op value to *hex --- Needs finishing off */
 	*hex = 0;
-	switch (opnumber){
-	case ADD:
-		*hex += 32;
+	switch(op.opn){
+	case ADD: /* FALLTHROUGH */
+	case AND:
+	case OR:
+	case SLT:
+	case SUB:
+	case XOR:
 		break;
 	case ADDI:
-		*hex += (8 << 26);
 		break;
-	case AND:
-		*hex += 36;
-		break;
-	case BEQ:
-		*hex += (4 << 26);
-		break;
-	case BGTZ:
-		*hex += (7 << 26);
-		break;
-	case BLEZ:
-		*hex += (6 << 26);
-		break;
+	case BEQ: /* FALLTHROUGH */
 	case BNE:
-		*hex += (5 << 26);
 		break;
-	case DIV:
-		*hex += 26;
+	case BGTZ: /* FALLTHROUGH */
+	case BLEZ:
 		break;
-	case J:
-		*hex += (2 << 26);
+	case DIV: /* FALLTHROUGH */
+	case MULT:
 		break;
+	case J: /* FALLTHROUGH */
 	case JAL:
-		*hex += (3 << 26);
 		break;
 	case JR:
-		*hex += 8;
 		break;
 	case LUI:
-		*hex += (15 << 26);
 		break;
-	case LW:
-		*hex += (35 << 26);
+	case LW: /* FALLTHROUGH */
+	case SW:
 		break;
-	case MFHI:
-		*hex += 16;
-		break;
+	case MFHI: /* FALLTHROUGH */
 	case MFLO:
-		*hex += 18;
-		break;
-	case MULT:
-		*hex += 24;
 		break;
 	case NOP:
-		return 0; // NO OP
-	case OR:
-		*hex += 37;
 		break;
-	case ROTR:
-		// ???
-		break;
+	case ROTR: /* FALLTHROUGH */
 	case SLL:
-		break;
-	case SLT:
-		*hex += 42;
-		break;
 	case SRL:
-		*hex += 2;
 		break;
-	case SUB:
-		*hex += 34;
-		break;
-	case SW:
-		*hex += (43 << 26);
 	case SYSCALL:
-		*hex += 12;
 		break;
-	case XOR:
-		*hex += 38;
-		break;
-	default:
-		return 1;
+	default: /* NOTREACHED */
+		return 1; 
 	}
 	return 0;
 }
 
-// Returns length of op, 0 if op not recognized.
-int 
-parseOp(const char *instr, int *opnumber)
+/* Returns 0 if op is recognized, 1 if not. */
+static int
+getop(const char *instr, operator *opp)
 {
-	extern const char *opArr[];
-	char *op;
+	extern const char *ops[];
 	int i;
 
-	// Find op in instruction
-	op = emalloc((MAX_OP_SIZE + 1) * sizeof(char));
-	for (i = 0; instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\0' && instr[i] != '\v'; ++i){
-		if (i == MAX_OP_SIZE){
-			free(op);
-			return 0;
-		}
-		op[i] = instr[i];
+	/* Find opstr in instr and save opl */
+	opp->opstr = emalloc((MAX_OP_SIZE + 1) * sizeof(char));
+	for (i = 0; instr[i] != '\t'
+			 && instr[i] != ' '
+			 && instr[i] != '\0'
+			 && instr[i] != '\v'; ++i){
+		if (i == MAX_OP_SIZE)
+			return 1;
+		opp->opstr[i] = instr[i];
 	}
-	op[i] = '\0';
+	opp->opstr[i] = '\0';
+	opp->opl = i;
 
-	// Find op in opArr ----- A faire en dichotomique
-	for (*opnumber = 0; *opnumber < NUMBER_OPS; ++(*opnumber)){
-		if (!strcmp(op, opArr[*opnumber])){
-			free(op);
-			return i;
-		}
+	/* Find opstr in ops[] and save opn ----- A faire en dichotomique */
+	for (opp->opn = 0; opp->opn < NUMBER_OPS; ++(opp->opn)){
+		if (!strcmp(opp->opstr, ops[opp->opn]))
+			return 0;
 	}
-	free(op);
-	return 0;
+	return 1;
 }
 
-// Returns number of arguments of passed instruction.
-int
-parseArgs(const char *instr, char ***args)
+/* Returns 0. */
+static int
+getargs(const char *instrwoop, arguments *args)
 {
-	int i, j, l, n;
+	int i, j, l;
 
-	i = j = l = n = 0;
+	i = j = l = 0;
 	
-	*args = emalloc(MAX_NUMBER_ARGS * sizeof(char *));
-	while (j < MAX_NUMBER_ARGS){ // Initialize args to NULL
-		*args[j] = NULL;
+	args->argArr = emalloc(MAX_NUMBER_ARGS * sizeof(char *));
+	while (j < MAX_NUMBER_ARGS){ /* Initialize argArr[*] to NULL */
+		args->argArr[j] = NULL;
 		++j;
 	}
 	j = 0;
-	while (n < MAX_NUMBER_ARGS){
-		while (instr[i] == '\t' || instr[i] == ' ' || instr[i] == '\v'){ // Find start of arg
+	while (args->nargs < MAX_NUMBER_ARGS){
+		while (instrwoop[i] == '\t'
+			|| instrwoop[i] == ' '
+			|| instrwoop[i] == '\v'){ /* Find start of arg in instrwoop */
 			++i;
 		}
-		while (instr[i] != '\t' && instr[i] != ' ' && instr[i] != '\v' && instr[i] != '\0'){ // Determine arg length
+		while (instrwoop[i] != '\t'
+			&& instrwoop[i] != ' '
+			&& instrwoop[i] != '\v'
+			&& instrwoop[i] != '\0'){ /* Determine arg length */
 			++i;
 			++l;
 		}
-		if (l == 0) // If end of instr
-			return n;
-		*args[n] = emalloc((l + 1) * sizeof(char));
+		if (l == 0) /* If end of instr */
+			return 0;
+		args->argArr[args->nargs] = emalloc((l + 1) * sizeof(char));
 		i -= l;
-		while (j < l){ // Save arg
-			*args[n][j] = instr[i];
+		while (j < l){ /* Save argArr[n] */
+			args->argArr[args->nargs][j] = instrwoop[i];
 			++i;
 			++j;
 		}
-		*args[n][j] = '\0';
-		++n;
+		args->argArr[args->nargs][j] = '\0';
+		++(args->nargs);
 		j = l = 0;
 	}
-	return n;
+	return 0;
 }
