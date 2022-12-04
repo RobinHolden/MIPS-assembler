@@ -22,28 +22,70 @@ date: 26/10/2022
 * Comment avez-vous choisi de programmer l'analyse de texte (dont la lecture
 des opérandes entières) ?
 
-[COMPLÉTER ICI]
+Nous avons choisi de stocker une par une les lignes du fichier d'entrée dans
+une chaîne de caractères, en tronquant les éventuels caractères d'espacement
+en début de ligne et les commentaires en fin de ligne.
+Ensuite, le programme distingue l'opérateur des opérandes, et les enregistre
+dans une structure `Inst`.
+Cette structure sert ensuite à déterminer la valeur héxadécimale de
+l'instruction, à l'aide de tableaux répertoriant les types et arguments de
+chaque instruction. La lecture des opérandes entières se fait à l'aide de
+l'appel de fonction `strtol(arg[i], p, 0)`, avec une vérification que la
+valeur retournée soit supportée.
 
 * Avez-vous vu des motifs récurrents émerger ? Avez-vous "factorisé" ces motifs
 pour éviter de les répéter ? Si non, serait-ce difficile ?
 
-[COMPLÉTER ICI]
+Nous avons en effet "factorisé" certains aspects du programme.
+L'exemple le plus flagrant serait le fait de regrouper les instructions par
+type (`RTYPE`, `ITYPE`, `JTYPE`).
+Nous avons également remarqué que nous avions besoin d'utiliser la même
+fonctionnalité à plusieurs endroits du programme, ce qui nous a mené a
+créer de nouvelles fonctions telles que `skipcomm` et `endofinst`.
+Si nous n'avions pas factorisé certains passages du programme, le code source
+serait surement plus long, et potentiellement moins lisible.
+Cependant, certains aspects de factorisation enlèvent une partie de
+flexbilité du code, si par exemple on venait à apporter des modifications
+assez large au jeu d'instruction MIPS.
 
 * Comment avez-vous procédé pour écrire les tests ? Étes-vous confiant·e·s que
 toutes les instructions gérées sont couvertes ? 
 
-[COMPLÉTER ICI]
+Nous avons écrit un fichier de test comprenant toutes les instructions
+implémentées, avec les différents cas de syntaxe que l'on peut rencontrer:
+ - Registres : $0, $ra, etc.
+ - Valeurs entières :  0x150, -0x150, 10, -10 etc.
+ - Espacements avant les instructions
+ - Espacements entre opérateur et opérande, ou entre opérandes
+ - Espacements autour des virgules séparant les opérandes
+ - Espacements en fin de ligne
+ - Commentaires en fin de ligne
+ - Commentaires seuls sur une ligne
+Les tests étants réalisés sur toutes les instructions, nous sommes confiants
+qu'elles sont couvertes.
 
 * Quelle a été votre expérience avec l'utilisation et la compréhension de la
 documentation (ie. des annexes) ?
 
-[COMPLÉTER ICI]
+La longueur des annexes nous a d'abord un peu découragés, ce qui a conduit à
+une compréhension trop partielle de l'ISA MIPS. Ceci a ralenti notre
+vitesse de progression d'écriture du programme, et a conduit à de moins
+bonnes implémentations, du code moins claire et moins structuré.
+Après avoir prit le temps de bien comprendre l'entièreté des annexes, nous
+nous sommes rendus compte qu'elles étaient indispensable à l'écriture d'un
+programme bien structuré. Nous avons trouvé ces annexes très claires et
+complètes, sans pour autant contenir des informations inutiles, ou
+trop redondantes.
+
+PS : Nous n'avons pas implémenté les instructions `NOP` et `SYSCALL`, car
+elles n'étaient pas présentes dans la liste des instructions à implémenter
+dans l'annexe 1, même si ce serait surement possible.
 
 * Cochez (en remplaçant `[ ]` par `[x]`) si vous avez :
-  - [ ] Implémenté la traduction pour des instructions de toutes les catéories
+  - [x] Implémenté la traduction pour des instructions de toutes les catégories
       (calcul, comparaisons, sauts, HI/LO, mémoire)
-  - [ ] Implémenté la traduction pour toutes les instructions de l'annexe 2
-  - [ ] Pris en compte les cas particuliers : valeurs négatives, hors limites,
+  - [x] Implémenté la traduction pour toutes les instructions de l'annexe 2
+  - [x] Pris en compte les cas particuliers : valeurs négatives, hors limites,
       noms d'instructions ou opérandes invalides...
 
 

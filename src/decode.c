@@ -2,137 +2,121 @@
 #include <string.h>
 
 #include "decode.h"
+#include "formats.h"
 #include "util.h"
 
-/*
- * Returns 0 on success, -1 if op isn't recognized, -2 if wrong number of args,
- * <arg_number> if an arg isn't recognized (starting from 1).
- */
-int
-decode(const char *instr, int *hex) /* Needs finishing off (don't forget to free) */
-{
-	operator op;
-	arguments args;
-	
-	if (!parseop(instr, &op))
-		return -1;
-	getargs(instr + op.opl, &args);
+static int getop(char **rawinst, int *opn);
+static int getargs(char *rawinst, char *args[]);
 
-	/* Sum op value to *hex --- Needs finishing off */
-	*hex = 0;
-	switch(op.opn){
-	case ADD: /* FALLTHROUGH */
-	case AND:
-	case OR:
-	case SLT:
-	case SUB:
-	case XOR:
-		break;
-	case ADDI:
-		break;
-	case BEQ: /* FALLTHROUGH */
-	case BNE:
-		break;
-	case BGTZ: /* FALLTHROUGH */
-	case BLEZ:
-		break;
-	case DIV: /* FALLTHROUGH */
-	case MULT:
-		break;
-	case J: /* FALLTHROUGH */
-	case JAL:
-		break;
-	case JR:
-		break;
-	case LUI:
-		break;
-	case LW: /* FALLTHROUGH */
-	case SW:
-		break;
-	case MFHI: /* FALLTHROUGH */
-	case MFLO:
-		break;
-	case NOP:
-		break;
-	case ROTR: /* FALLTHROUGH */
-	case SLL:
-	case SRL:
-		break;
-	case SYSCALL:
-		break;
-	default: /* NOTREACHED */
-		return 1; 
+/*
+ * Returns 0 on success, 1 if op isn't recognized
+ */
+Inst
+decode(char *rawinst)
+{
+	char *p;
+	int n;
+	Inst inst = {
+		NULL,
+		-1,
+		{NULL, NULL, NULL}
+	};
+	
+	/* Get label, if exists */
+	if ((p = strchr(rawinst, ':')) != NULL){
+		rawinst[p - rawinst] = '\0';
+		inst.label = emalloc((p - rawinst + 1) * sizeof(char));
+		strcpy(inst.label, rawinst);
+		rawinst += p - rawinst + 1;
 	}
-	return 0;
+
+	/* If op was recognized and potential args*/
+	if ((n = getop(&rawinst, &inst.opn)) != EOF)
+		getargs(rawinst, inst.args);
+	return inst;
 }
 
-/* Returns 0 if op is recognized, 1 if not. */
+/*
+ * If op is recognized, returns EOF if end of line was found, 0 if not.
+ * If op isn't recognized, returns 1.
+*/ 
 static int
-getop(const char *instr, operator *opp)
+getop(char **rawinst, int *opn)
 {
-	extern const char *ops[];
+	char opstr[MAX_OP_SIZE + 1];
 	int i;
 
-	/* Find opstr in instr and save opl */
-	opp->opstr = emalloc((MAX_OP_SIZE + 1) * sizeof(char));
-	for (i = 0; instr[i] != '\t'
-			 && instr[i] != ' '
-			 && instr[i] != '\0'
-			 && instr[i] != '\v'; ++i){
-		if (i == MAX_OP_SIZE)
-			return 1;
-		opp->opstr[i] = instr[i];
+	/* Find first character of op */
+	while (**rawinst == ' ' || **rawinst == '\t'){
+		(*rawinst)++;
 	}
-	opp->opstr[i] = '\0';
-	opp->opl = i;
+	if (**rawinst == '\0')
+		return EOF;
+	/* Fill in opstr */
+	for (i = 0; (*rawinst)[i] != ' '
+			 && (*rawinst)[i] != '\t'
+			 && (*rawinst)[i] != '\0'
+			 && i < MAX_OP_SIZE; ++i){
+		opstr[i] = (*rawinst)[i];
+	}
+	opstr[i] = '\0';
 
-	/* Find opstr in ops[] and save opn ----- A faire en dichotomique */
-	for (opp->opn = 0; opp->opn < NUMBER_OPS; ++(opp->opn)){
-		if (!strcmp(opp->opstr, ops[opp->opn]))
+	/* Find opstr in list of ops ----- A faire en dichotomique */
+	for (*opn = 0; *opn < NUMBER_OPS; ++(*opn)){
+		if (!strcmp(opstr, instfmts[*opn].op)){
+			if ((*rawinst)[i] == '\0')
+				return EOF;
+			*rawinst += i;
 			return 0;
+		}
 	}
-	return 1;
+	fprintf(stderr, "Error : Operator %s not recognized\n", opstr);
+	exit(1);
 }
 
 /* Returns 0. */
 static int
-getargs(const char *instrwoop, arguments *args)
+getargs(char *rawinst, char *args[])
 {
-	int i, j, l;
+	int i, l, n;
 
-	i = j = l = 0;
+	n = 0;
 	
-	args->argArr = emalloc(MAX_NUMBER_ARGS * sizeof(char *));
-	while (j < MAX_NUMBER_ARGS){ /* Initialize argArr[*] to NULL */
-		args->argArr[j] = NULL;
-		++j;
-	}
-	j = 0;
-	while (args->nargs < MAX_NUMBER_ARGS){
-		while (instrwoop[i] == '\t'
-			|| instrwoop[i] == ' '
-			|| instrwoop[i] == '\v'){ /* Find start of arg in instrwoop */
-			++i;
+	while (n < MAX_NUMBER_ARGS){
+		i = l = 0;
+		
+		/* Find start of arg in rawinst */
+		while ((*rawinst == ' ' || *rawinst == '\t') && *rawinst != '\0'){
+			++rawinst;
 		}
-		while (instrwoop[i] != '\t'
-			&& instrwoop[i] != ' '
-			&& instrwoop[i] != '\v'
-			&& instrwoop[i] != '\0'){ /* Determine arg length */
-			++i;
-			++l;
-		}
-		if (l == 0) /* If end of instr */
+		if (*rawinst == '\0')
 			return 0;
-		args->argArr[args->nargs] = emalloc((l + 1) * sizeof(char));
-		i -= l;
-		while (j < l){ /* Save argArr[n] */
-			args->argArr[args->nargs][j] = instrwoop[i];
-			++i;
-			++j;
+		while (*rawinst != ','
+			&& *rawinst != ' '
+			&& *rawinst != '\t'
+			&& *rawinst != '\0'){ /* Determine arg length */
+			++l;
+			++rawinst;
 		}
-		args->argArr[args->nargs][j] = '\0';
-		++(args->nargs);
-		j = l = 0;
+		if (l == 0) /* If end of inst */
+			return 0;
+		args[n] = emalloc((l + 1) * sizeof(char));
+		rawinst -= l;
+		while (i < l){ /* Save argArr[n] */
+			args[n][i] = *rawinst;
+			++rawinst;
+			++i;
+		}
+		args[n][i] = '\0';
+
+		/* Go to next comma or end of inst */
+		while (*rawinst != ',' && *rawinst != '\0'){
+			++rawinst;
+		}
+		if (*rawinst == '\0')
+			return 0;
+		++rawinst;
+		++n;
 	}
 	return 0;
 }

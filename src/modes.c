@@ -1,5 +1,9 @@
 #include <stdio.h>
+
+#include "decode.h"
+#include "extract.h"
 #include "util.h"
+#include "write.h"
 
 int
 interMode()
@@ -24,15 +28,22 @@ int
 autoMode(const char *fin, const char *fhex, const char *ffstate)
 {
 	FILE *rfp, *hexfp, *fstatefp;
-	
+	char *rawinst;
+	int ignore;
+	Inst inst;
+
+	rawinst = NULL;
 	rfp = efopen(fin, "r");
 	hexfp = efopen(fhex, "w");
 	fstatefp = efopen(ffstate, "w");
 
-	/*
-	n = decode(instr, &hex);
-	fprintf(fp, "08%x\n", n);
-	*/
+	while ((ignore = extract(rfp, &rawinst)) != EOF){
+		if (!ignore){
+			inst = decode(rawinst);
+			write(inst, hexfp);
+			// Write instruction to hexfp;
+		}
+	}
 
 	fclose(rfp);
 	fclose(hexfp);
