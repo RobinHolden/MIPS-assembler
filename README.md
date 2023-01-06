@@ -41,7 +41,7 @@ L'exemple le plus flagrant serait le fait de regrouper les instructions par
 type (`RTYPE`, `ITYPE`, `JTYPE`).
 Nous avons également remarqué que nous avions besoin d'utiliser la même
 fonctionnalité à plusieurs endroits du programme, ce qui nous a mené a
-créer de nouvelles fonctions telles que `skipcomm` et `endofinst`.
+créer de nouvelles fonctions telles que `skipwhitespace`.
 Si nous n'avions pas factorisé certains passages du programme, le code source
 serait surement plus long, et potentiellement moins lisible.
 Cependant, certains aspects de factorisation enlèvent une partie de
@@ -95,15 +95,50 @@ dans l'annexe 1, même si ce serait surement possible.
 
 * Quelle structure en modules planifiez-vous d'utiliser pour l'émulateur ?
 
-[COMPLÉTER ICI]
+• Lecture des instructions texte dans un fichier:
+    Conversion du flux venant du fichier d'entrée en structure `rawinst` contenant des chaînes de caractères (op et args).
+
+• Conversion de structure `rawinst` vers une structure `inst`
+    La structure `inst` contient les valeurs entières des éléments de `rawinst`.
+
+• Ecriture des instructions en héxadécimal dans un fichier de sortie
+    Calcul de la valeur héxadécimale de l'instruction grâce à un ensemble de tableaux et des éléments de factorisation.
+
+• Décodage des instructions assemblées en hexadécimal.
+    Utilisation d'opérations logiques permettant de distinguer les éléments des instructions.
+    Résultat contenu dans un élément `inst`.
+• Execution des instructions grâce à une simulation des registres et de la mémoire
+    Fonctions individuelles, une pour chaque instruction
 
 * Quelles seront les fonctions principales de chaque module ?
 
-[COMPLÉTER ICI]
+Lecture:
+getrawargs, getrawop
+
+Conversion:
+getopn, getargs, immval, regval, targval
+
+Ecriture:
+write
+
+Decodage:
+decodehex
+
+Execution:
+Fonctions indivuelles
+push
+pop
 
 * Quels avantages voyez vous à cette structure (à comparer à un unique fichier)?
 
-[COMPLÉTER ICI]
+La séparation en différents modules permet une lecture plus facile du programme:
+ - Noms de fichier explicites permettant la compréhension globale
+ - Fonctions utilisées pour un module regroupées, meilleure clarté
+ - Plus facile de naviguer dans le code quand on le lit, car fichiers moins longs
+ - Permet d'avoir une fonction principale d'éxecution du programme qui permet de bien voir la structure du programme en faisant appel aux différents modules.
+
+Cela permet aussi de bien séparer les différentes fonctionnalités, qui peuvent être réutilisées dans différents contextes.
+
 
 
 ## Rendu 4

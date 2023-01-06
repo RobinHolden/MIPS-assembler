@@ -1,8 +1,10 @@
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void *emalloc(size_t size)
+void
+*emalloc(size_t size)
 {
 	void *p = NULL;
 
@@ -12,9 +14,8 @@ void *emalloc(size_t size)
     }
 	return p;
 }
-
-
-FILE *efopen(const char *pathname, const char *mode)
+FILE
+*efopen(const char *pathname, const char *mode)
 {
     FILE *fp;
 
@@ -23,4 +24,14 @@ FILE *efopen(const char *pathname, const char *mode)
         exit(1);
     }
     return fp;
+}
+void
+error(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	exit(1);
 }

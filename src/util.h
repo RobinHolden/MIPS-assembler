@@ -1,5 +1,5 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _UTIL_H_
+#define _UTIL_H_
 
 #include <stdio.h>
 
@@ -7,5 +7,6 @@
 
 void *emalloc(size_t size);
 FILE *efopen(const char *pathname, const char *mode);
+void error(const char *fmt, ...);
 
 #endif

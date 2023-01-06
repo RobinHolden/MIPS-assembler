@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
-int extract(FILE *rfp, char **rawinst);
+#include "struct.h"
+
+int extract(FILE *rfp, Rawinst *rawinst);
 
 #endif

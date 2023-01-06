@@ -3,8 +3,8 @@
 
 #include <stdio.h>
 
-#include "decode.h"
+#include "struct.h"
 
-int write(Inst inst, FILE *hexfp);
+int write(Inst *inst, FILE *hexfp);
 
 #endif
